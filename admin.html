@@ -1,0 +1,1595 @@
+<!doctype html>
+<html lang="th" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบจัดการข้อสอบและคุมสอบ - วิทยาลัยเทคนิคดอนเมือง</title>
+  
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="theme-color" content="#2563eb">
+  
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'sarabun': ['Sarabun', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    * { font-family: 'Sarabun', sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%); }
+    .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .sidebar-item { transition: all 0.2s ease; }
+    .sidebar-item:hover { background: rgba(255,255,255,0.1); }
+    .sidebar-item.active { background: rgba(255,255,255,0.2); border-left: 4px solid white; }
+    .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    .table-container { overflow-x: auto; }
+    .table-container::-webkit-scrollbar { height: 8px; }
+    .table-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+    .table-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+    .badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-success { background: #dcfce7; color: #166534; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-danger { background: #fee2e2; color: #991b1b; }
+    .badge-info { background: #dbeafe; color: #1e40af; }
+  </style>
+ </head>
+ <body class="h-full bg-gray-50 font-sarabun">
+  <div id="app" class="h-full">
+    <!-- Loading Spinner -->
+    <div id="loading" class="fixed inset-0 bg-white/90 z-50 flex items-center justify-center hidden backdrop-blur-sm">
+      <div class="text-center">
+        <i class="fas fa-circle-notch spin text-5xl text-primary-500 mb-4"></i>
+        <p id="loadingText" class="text-gray-600 text-lg transition-all duration-300">กำลังเชื่อมต่อข้อมูล...</p>
+      </div>
+    </div>
+
+    <!-- Login View (When Not Authenticated) -->
+    <div id="view-login" class="h-full flex flex-col justify-center items-center p-4 bg-slate-100">
+      <div class="w-full max-w-md bg-white rounded-2xl card-shadow p-8 fade-in">
+        <div class="text-center mb-6">
+          <div class="w-20 h-20 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-primary-600 shadow-md">
+            <i class="fas fa-user-shield text-4xl"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-800">เข้าสู่ระบบผู้ดูแล/ครู</h2>
+          <p class="text-sm text-gray-500 mt-1">วิทยาลัยเทคนิคดอนเมือง</p>
+        </div>
+        
+        <form id="admin-login-form" class="space-y-4">
+          <div>
+            <label class="block text-gray-700 font-medium mb-1.5 text-sm">ชื่อผู้ใช้</label> 
+            <input type="text" id="admin-username" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none transition" placeholder="กรอกชื่อผู้ใช้">
+          </div>
+          <div>
+            <label class="block text-gray-700 font-medium mb-1.5 text-sm">รหัสผ่าน</label>
+            <div class="relative">
+              <input type="password" id="admin-password" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none transition pr-12" placeholder="กรอกรหัสผ่าน"> 
+              <button type="button" class="password-toggle-btn absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" data-target="admin-password"> 
+                <i class="fas fa-eye"></i> 
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition text-lg mt-2">
+            <i class="fas fa-sign-in-alt mr-2"></i> เข้าสู่ระบบ
+          </button>
+        </form>
+
+        <div class="mt-6 pt-4 border-t text-center flex flex-col gap-2">
+          <button onclick="showModal('admin-register-modal')" class="text-sm text-primary-600 hover:text-primary-700 font-semibold">
+            ยังไม่มีบัญชี? สมัครสมาชิก
+          </button>
+          <a href="index.html" class="text-sm text-gray-500 hover:text-gray-700 mt-2 flex items-center justify-center gap-1.5">
+            <i class="fas fa-arrow-left text-xs"></i> กลับสู่หน้าเข้าสอบของนักเรียน
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Main Portal (When Authenticated) -->
+    <div id="view-portal" class="hidden h-full flex">
+      <!-- Sidebar -->
+      <aside id="admin-sidebar" class="w-64 gradient-bg text-white flex flex-col transition-all duration-300 overflow-hidden shrink-0 h-full" style="margin-left: 0;">
+        <div class="p-4 border-b border-white/20 shrink-0">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0">
+              <i class="fas fa-user-shield text-primary-600"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="font-bold truncate" id="admin-name">ผู้ดูแลระบบ</p>
+              <p class="text-xs text-blue-200" id="admin-role">Admin</p>
+            </div>
+          </div>
+        </div>
+        <nav class="flex-1 py-4 overflow-y-auto custom-scrollbar">
+          <div class="space-y-1 px-2 pb-4">
+            <button onclick="showAdminPage('dashboard')" class="sidebar-item active w-full text-left px-4 py-3 rounded-lg flex items-center gap-3" data-page="dashboard">
+              <i class="fas fa-chart-pie w-5"></i> แดชบอร์ด
+            </button> 
+            <button onclick="showAdminPage('announcements')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3" data-page="announcements">
+              <i class="fas fa-bullhorn w-5"></i> ประกาศ
+            </button>
+            <button onclick="showAdminPage('proctoring')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3" data-page="proctoring">
+              <i class="fas fa-desktop w-5"></i> คุมสอบ
+            </button>
+            <button onclick="showAdminPage('members')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3" data-page="members">
+              <i class="fas fa-users w-5"></i> จัดการสมาชิก
+            </button> 
+            <button onclick="showAdminPage('create-exam')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3" data-page="create-exam">
+              <i class="fas fa-plus-circle w-5"></i> สร้างข้อสอบ
+            </button> 
+            <button onclick="showAdminPage('exams')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3" data-page="exams">
+              <i class="fas fa-file-alt w-5"></i> จัดการข้อสอบ
+            </button> 
+            <button onclick="showAdminPage('students')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3" data-page="students">
+              <i class="fas fa-user-graduate w-5"></i> ข้อมูลผู้สอบ
+            </button> 
+            <button onclick="showAdminPage('results')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3" data-page="results">
+              <i class="fas fa-poll w-5"></i> ผลสอบ
+            </button> 
+            <button onclick="showAdminPage('grading')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3" data-page="grading">
+              <i class="fas fa-check-double w-5"></i> ตรวจอัตนัย
+            </button> 
+            <button onclick="showAdminPage('settings')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3" data-page="settings">
+              <i class="fas fa-cog w-5"></i> ตั้งค่าเวลา
+            </button> 
+            <button onclick="showAdminPage('profile')" class="sidebar-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3" data-page="profile">
+              <i class="fas fa-user-edit w-5"></i> แก้ไขข้อมูล
+            </button>
+          </div>
+        </nav>
+        <div class="p-4 border-t border-white/20 shrink-0 space-y-2">
+          <a href="index.html" class="w-full bg-white/10 hover:bg-white/20 py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition text-sm">
+            <i class="fas fa-graduation-cap"></i> ไปยังหน้าสอบนักเรียน
+          </a>
+          <button onclick="adminLogout()" class="w-full bg-red-500/80 hover:bg-red-600 py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition text-sm font-semibold">
+            <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Navigation Bar -->
+        <header class="bg-white shadow-sm px-4 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <button onclick="toggleSidebar()" class="text-gray-600 text-xl hover:text-primary-500 transition">
+              <i class="fas fa-bars"></i>
+            </button>
+            <h2 id="admin-page-title" class="text-xl font-bold text-gray-800">แดชบอร์ด</h2>
+          </div>
+          <div class="flex items-center gap-4">
+            <p id="admin-datetime" class="text-sm font-medium text-gray-700 hidden sm:block"></p>
+            <button onclick="refreshData()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 rounded-lg transition" title="รีเฟรชข้อมูล">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+          </div>
+        </header>
+
+        <!-- Dynamic Pages -->
+        <main class="flex-1 overflow-auto p-4 md:p-6 bg-gray-50">
+          <!-- 1. Dashboard -->
+          <div id="admin-dashboard" class="admin-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div onclick="showAdminPage('members')" class="bg-white rounded-xl card-shadow p-4 cursor-pointer hover:shadow-lg transition">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-gray-500 text-sm">สมาชิกทั้งหมด</p>
+                    <p id="stat-members" class="text-2xl font-bold text-gray-800">0</p>
+                  </div>
+                  <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 text-xl">
+                    <i class="fas fa-users"></i>
+                  </div>
+                </div>
+              </div>
+              <div onclick="showAdminPage('exams')" class="bg-white rounded-xl card-shadow p-4 cursor-pointer hover:shadow-lg transition">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-gray-500 text-sm">ข้อสอบทั้งหมด</p>
+                    <p id="stat-exams" class="text-2xl font-bold text-gray-800">0</p>
+                  </div>
+                  <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-green-600 text-xl">
+                    <i class="fas fa-file-alt"></i>
+                  </div>
+                </div>
+              </div>
+              <div onclick="showAdminPage('students')" class="bg-white rounded-xl card-shadow p-4 cursor-pointer hover:shadow-lg transition">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-gray-500 text-sm">ผู้เข้าสอบ</p>
+                    <p id="stat-students" class="text-2xl font-bold text-gray-800">0</p>
+                  </div>
+                  <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center text-yellow-600 text-xl">
+                    <i class="fas fa-user-graduate"></i>
+                  </div>
+                </div>
+              </div>
+              <div onclick="showAdminPage('results')" class="bg-white rounded-xl card-shadow p-4 cursor-pointer hover:shadow-lg transition">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-gray-500 text-sm">ผลสอบล่าสุด</p>
+                    <p id="stat-results" class="text-2xl font-bold text-gray-800">0</p>
+                  </div>
+                  <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 text-xl">
+                    <i class="fas fa-poll"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div class="bg-white rounded-xl card-shadow p-4">
+                <h3 class="font-bold text-gray-800 mb-4">สถิติการสอบรายวัน</h3>
+                <div class="h-64"><canvas id="chart-daily"></canvas></div>
+              </div>
+              <div class="bg-white rounded-xl card-shadow p-4">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="font-bold text-gray-800">ผลการสอบทุกวิชา</h3>
+                </div>
+                <div class="h-64 relative flex items-center justify-center">
+                  <canvas id="chart-pass-fail"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-xl card-shadow p-4">
+              <h3 class="font-bold text-gray-800 mb-4">กิจกรรมล่าสุด</h3>
+              <div id="recent-activity" class="space-y-3">
+                <p class="text-gray-500 text-center py-4">ยังไม่มีกิจกรรม</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Announcements -->
+          <div id="admin-announcements" class="admin-content hidden">
+            <div class="flex items-center justify-start gap-4 mb-6">
+              <button id="btn-add-announcement" onclick="openAddAnnouncementModal()" class="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-md transition">
+                <i class="fas fa-plus"></i> เพิ่มประกาศใหม่
+              </button>
+            </div>
+            <div class="bg-white rounded-xl card-shadow overflow-hidden">
+              <div class="table-container">
+                <table class="w-full">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">#</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">หัวข้อข่าวสาร</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">ระดับความสำคัญ</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">วันที่สร้าง</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">สถานะ</th>
+                      <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="announcements-table" class="divide-y divide-gray-100">
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">ไม่พบประกาศข่าวสาร</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Proctoring -->
+          <div id="admin-proctoring" class="admin-content hidden">
+            <div class="bg-white rounded-2xl card-shadow p-6 mb-6">
+              <div class="flex flex-wrap items-center justify-start gap-3 mb-4 pb-4 border-b border-gray-100">
+                <div class="flex items-center gap-2 mr-2">
+                  <span class="relative flex h-3.5 w-3.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-600"></span>
+                  </span>
+                  <h3 class="text-xl font-bold text-gray-800 whitespace-nowrap">คุมสอบสด</h3>
+                </div>
+                <select id="proctor-subject-select" onchange="changeProctorSubject()" class="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none text-sm font-semibold text-gray-700 bg-white shadow-sm min-w-[240px]">
+                  <option value="">-- เลือกรายวิชาเพื่อคุมสอบ --</option>
+                </select>
+                <button onclick="broadcastAlertToAllModal()" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-2">
+                  <i class="fas fa-bullhorn"></i> แจ้งเตือนทุกคน
+                </button>
+              </div>
+
+              <!-- Proctoring Stats Summary -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-4">
+                  <p class="text-xs font-bold text-blue-700 uppercase">กำลังทำข้อสอบ</p>
+                  <p id="proctor-stat-active" class="text-2xl font-bold text-blue-900 mt-1">0</p>
+                </div>
+                <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-4">
+                  <p class="text-xs font-bold text-amber-700 uppercase">มีการแจ้งเตือน/หลุดโฟกัส</p>
+                  <p id="proctor-stat-warned" class="text-2xl font-bold text-amber-900 mt-1">0</p>
+                </div>
+                <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4">
+                  <p class="text-xs font-bold text-emerald-700 uppercase">ส่งข้อสอบแล้ว</p>
+                  <p id="proctor-stat-submitted" class="text-2xl font-bold text-emerald-900 mt-1">0</p>
+                </div>
+                <div class="bg-rose-50/70 border border-rose-200 rounded-xl p-4">
+                  <p class="text-xs font-bold text-rose-700 uppercase">ตรวจพบทุจริต/ถูกตัดสิทธิ์</p>
+                  <p id="proctor-stat-disqualified" class="text-2xl font-bold text-rose-900 mt-1">0</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Students Live Table -->
+            <div class="bg-white rounded-2xl card-shadow overflow-hidden">
+              <div class="p-4 bg-gray-50 border-b flex items-center justify-between">
+                <h4 class="font-bold text-gray-700 flex items-center gap-2">
+                  <i class="fas fa-users-viewfinder text-primary-600"></i> รายชื่อผู้สอบในรายวิชานี้
+                </h4>
+                <span id="proctor-current-subject-label" class="text-xs font-semibold bg-white border px-3 py-1 rounded-full text-gray-600">ยังไม่ได้เลือกรายวิชา</span>
+              </div>
+              <div class="table-container">
+                <table class="w-full">
+                  <thead class="bg-gray-100">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">#</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">รหัส/ชื่อ-สกุล</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">ชั้น/ห้อง/เลขที่</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">เวลาเริ่มสอบ</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">ระดับคำเตือน</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">สถานะการสอบ</th>
+                      <th class="px-4 py-3 text-center text-xs font-bold text-gray-600">สั่งการห้องสอบ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="proctor-students-table" class="divide-y divide-gray-100">
+                    <tr><td colspan="7" class="px-4 py-12 text-center text-gray-400">กรุณาเลือกรายวิชาเพื่อเริ่มคุมสอบ</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Members -->
+          <div id="admin-members" class="admin-content hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+              <div class="flex flex-wrap gap-2">
+                <button onclick="showModal('add-member-modal')" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                  <i class="fas fa-user-plus"></i> เพิ่มสมาชิกใหม่
+                </button> 
+                <button onclick="exportData('members', 'csv')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                  <i class="fas fa-file-csv"></i> CSV
+                </button>
+                <button onclick="exportData('members', 'excel')" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                  <i class="fas fa-file-excel"></i> Excel (.xlsx)
+                </button>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl card-shadow overflow-hidden">
+              <div class="table-container">
+                <table class="w-full">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">#</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">ชื่อผู้ใช้</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">ชื่อ-สกุล</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">อีเมล</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">สถานะ</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">บทบาท</th>
+                      <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="members-table" class="divide-y divide-gray-100">
+                    <tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">ไม่พบข้อมูล</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Create Exam -->
+          <div id="admin-create-exam" class="admin-content hidden">
+            <div class="bg-white rounded-xl card-shadow p-6">
+              <h3 class="text-xl font-bold text-gray-800 mb-6">สร้าง / แก้ไขชุดข้อสอบ</h3>
+              <form id="create-exam-form" class="space-y-6">
+                <input type="hidden" id="edit-exam-id" value="">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label class="block text-gray-700 font-medium mb-2">ชื่อรายวิชา</label> 
+                    <input type="text" id="exam-subject-name" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none" placeholder="กรอกชื่อรายวิชา">
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 font-medium mb-2">คะแนนเต็ม</label> 
+                    <input type="number" id="exam-total-score" required min="1" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none" placeholder="เช่น 100">
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 font-medium mb-2">คะแนนที่ผ่านเกณฑ์</label> 
+                    <input type="number" id="exam-passing-score" required min="0" step="0.5" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none" placeholder="เช่น 50">
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-gray-700 font-medium mb-2">เวลาทำข้อสอบ (นาที)</label> 
+                    <input type="number" id="exam-time-limit" required min="1" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none" placeholder="เช่น 60">
+                  </div>
+                  <div>
+                    <label class="block text-gray-700 font-medium mb-2">คะแนนต่อข้อ</label> 
+                    <input type="number" id="exam-score-per-question" required min="0.5" step="0.5" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none" placeholder="เช่น 1">
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-4">
+                  <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="exam-visible" class="w-5 h-5 text-primary-500 rounded"><span class="text-gray-700">แสดงรายวิชา</span></label> 
+                  <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="exam-show-answer" class="w-5 h-5 text-primary-500 rounded"><span class="text-gray-700">แสดงเฉลย</span></label> 
+                  <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="exam-shuffle-questions" class="w-5 h-5 text-primary-500 rounded"><span class="text-gray-700">สุ่มลำดับข้อ</span></label> 
+                  <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="exam-shuffle-choices" class="w-5 h-5 text-primary-500 rounded"><span class="text-gray-700">สุ่มตัวเลือก</span></label>
+                </div>
+                
+                <!-- MC Section -->
+                <div class="border-2 border-blue-300 rounded-xl p-4 bg-blue-50">
+                  <h4 class="font-bold text-gray-800 mb-3"><i class="fas fa-list-ul mr-2 text-blue-600"></i>ตอนที่ 1: ข้อสอบปรนัย</h4>
+                  <textarea id="mc-input" rows="8" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none text-sm font-sarabun" placeholder="1.คำถาม...&#10;ก.ตัวเลือก1&#10;ข.ตัวเลือก2&#10;ค.ตัวเลือก3&#10;ง.ตัวเลือก4&#10;เฉลย: ก.&#10;คะแนน: 1"></textarea>
+                  <div class="flex gap-2 mt-2">
+                    <button type="button" onclick="parseMultipleChoice()" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-wand-magic-sparkles mr-1"></i> แปลงเป็นข้อสอบ</button>
+                    <button type="button" onclick="clearInput('mc-input')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm">ล้าง</button>
+                  </div>
+                  <div id="mc-preview" class="mt-4 hidden border-t pt-3">
+                    <p id="mc-preview-count" class="text-sm font-semibold text-blue-800 mb-2"></p>
+                    <div id="mc-preview-content" class="space-y-2 max-h-60 overflow-y-auto"></div>
+                  </div>
+                </div>
+
+                <!-- Essay Section -->
+                <div class="border-2 border-orange-300 rounded-xl p-4 bg-orange-50">
+                  <h4 class="font-bold text-gray-800 mb-3"><i class="fas fa-pen-fancy mr-2 text-orange-600"></i>ตอนที่ 2: ข้อสอบอัตนัย</h4>
+                  <textarea id="essay-input" rows="6" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none text-sm font-sarabun" placeholder="1.คำถามอัตนัย...&#10;คะแนน: 10"></textarea>
+                  <div class="flex gap-2 mt-2">
+                    <button type="button" onclick="parseEssay()" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-wand-magic-sparkles mr-1"></i> แปลงเป็นข้อสอบ</button>
+                    <button type="button" onclick="clearInput('essay-input')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm">ล้าง</button>
+                  </div>
+                  <div id="essay-preview" class="mt-4 hidden border-t pt-3">
+                    <p id="essay-preview-count" class="text-sm font-semibold text-orange-800 mb-2"></p>
+                    <div id="essay-preview-content" class="space-y-2 max-h-60 overflow-y-auto"></div>
+                  </div>
+                </div>
+
+                <div class="flex gap-4">
+                  <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-6 rounded-xl shadow transition"><i class="fas fa-save mr-2"></i> บันทึกข้อสอบ</button>
+                  <button type="button" onclick="resetExamForm()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3.5 px-6 rounded-xl transition">รีเซ็ต</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- 6. Manage Exams -->
+          <div id="admin-exams" class="admin-content hidden">
+            <div class="flex flex-wrap gap-2 mb-4">
+              <button onclick="showAdminPage('create-exam')" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold shadow transition"><i class="fas fa-plus-circle"></i> สร้างข้อสอบใหม่</button>
+              <button onclick="exportData('exams', 'csv')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"><i class="fas fa-file-csv"></i> CSV</button>
+              <button onclick="exportData('exams', 'excel')" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"><i class="fas fa-file-excel"></i> Excel (.xlsx)</button>
+            </div>
+            <div class="bg-white rounded-xl card-shadow overflow-hidden">
+              <div class="table-container">
+                <table class="w-full">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">#</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">รายวิชา</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">จำนวนข้อ</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">คะแนนเต็ม (เกณฑ์ผ่าน)</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">เวลา</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">สถานะ</th>
+                      <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="exams-table" class="divide-y divide-gray-100">
+                    <tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">ไม่พบข้อมูล</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. Students Data -->
+          <div id="admin-students" class="admin-content hidden">
+            <div class="flex flex-wrap gap-2 mb-4">
+              <select id="students-filter-subject" onchange="filterStudentsTable()" class="px-4 py-2 border-2 border-gray-200 rounded-lg text-sm"><option value="">ทั้งหมด</option></select>
+              <button onclick="exportData('students', 'csv')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-csv"></i> CSV</button>
+              <button onclick="exportData('students', 'excel')" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-excel"></i> Excel (.xlsx)</button>
+            </div>
+            <div class="bg-white rounded-xl card-shadow overflow-hidden">
+              <div class="table-container">
+                <table class="w-full">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">#</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">รหัสนักเรียน</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">ชื่อ-สกุล</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">ชั้น/ห้อง</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">เลขที่</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">วิชาที่สอบ</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">สถานะ</th>
+                      <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="students-table" class="divide-y divide-gray-100">
+                    <tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">ไม่พบข้อมูล</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 8. Results -->
+          <div id="admin-results" class="admin-content hidden">
+            <div class="flex flex-wrap gap-2 mb-4">
+              <select id="results-filter-subject" onchange="filterResultsTable()" class="px-4 py-2 border-2 border-gray-200 rounded-lg text-sm"><option value="">ทั้งหมด</option></select>
+              <button onclick="exportData('results', 'csv')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-csv"></i> CSV</button>
+              <button onclick="exportData('results', 'excel')" class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-file-excel"></i> Excel (.xlsx)</button>
+            </div>
+            <div class="bg-white rounded-xl card-shadow overflow-hidden">
+              <div class="table-container">
+                <table class="w-full">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">#</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">นักเรียน</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">รายวิชา</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">คะแนนปรนัย</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">คะแนนอัตนัย</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">คะแนนรวม</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">เวลาส่ง</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">สถานะ</th>
+                      <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">ดูคำตอบ / จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="results-table" class="divide-y divide-gray-100">
+                    <tr><td colspan="9" class="px-4 py-8 text-center text-gray-500">ไม่พบข้อมูล</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 9. Grading -->
+          <div id="admin-grading" class="admin-content hidden">
+            <div class="flex gap-2 mb-4">
+              <select id="grading-filter-subject" onchange="filterGradingTable()" class="px-4 py-2 border-2 border-gray-200 rounded-lg text-sm"><option value="">ทั้งหมด</option></select>
+            </div>
+            <div class="bg-white rounded-xl card-shadow overflow-hidden">
+              <div class="table-container">
+                <table class="w-full">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">#</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">นักเรียน</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">รายวิชา</th>
+                      <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">สถานะ</th>
+                      <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">ตรวจ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="grading-table" class="divide-y divide-gray-100">
+                    <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">ไม่พบข้อมูลที่ต้องตรวจ</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 10. Time Settings -->
+          <div id="admin-settings" class="admin-content hidden">
+            <div class="bg-white rounded-xl card-shadow p-6">
+              <h3 class="text-xl font-bold text-gray-800 mb-6">ตั้งค่าเวลาสอบ</h3>
+              <div class="space-y-4" id="time-settings-list"></div>
+            </div>
+          </div>
+
+          <!-- 11. Profile -->
+          <div id="admin-profile" class="admin-content hidden">
+            <div class="max-w-xl mx-auto bg-white rounded-xl card-shadow p-6">
+              <h3 class="text-xl font-bold text-gray-800 mb-6 text-center">แก้ไขข้อมูลส่วนตัว</h3>
+              <form id="profile-form" class="space-y-4">
+                <div>
+                  <label class="block text-gray-700 font-medium mb-1">ชื่อ-สกุล</label> 
+                  <input type="text" id="profile-fullname" required class="w-full px-4 py-2.5 border rounded-xl">
+                </div>
+                <div>
+                  <label class="block text-gray-700 font-medium mb-1">อีเมล</label> 
+                  <input type="email" id="profile-email" required class="w-full px-4 py-2.5 border rounded-xl">
+                </div>
+                <div>
+                  <label class="block text-gray-700 font-medium mb-1">รหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)</label>
+                  <input type="password" id="profile-password" class="w-full px-4 py-2.5 border rounded-xl">
+                </div>
+                <button type="submit" class="w-full bg-primary-600 text-white font-bold py-3 rounded-xl shadow">บันทึกข้อมูล</button>
+              </form>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Detailed Result View Modal -->
+    <div id="view-result-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+      <div class="bg-white rounded-2xl card-shadow p-6 w-full max-w-3xl mx-4 fade-in max-h-[90%] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b">
+          <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-file-invoice text-primary-600 mr-2"></i>รายละเอียดคำตอบของผู้สอบ</h3>
+          <button onclick="hideModal('view-result-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div id="view-result-content" class="space-y-4"></div>
+        <div class="mt-6 text-right">
+          <button onclick="hideModal('view-result-modal')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-xl transition">ปิด</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grading Modal -->
+    <div id="grading-modal" class="hidden fixed inset-0 z-[80] flex items-start justify-center pt-8 md:pt-12 modal-overlay overflow-y-auto">
+      <div class="bg-white rounded-2xl card-shadow p-6 w-full max-w-2xl mx-4 fade-in max-h-[90%] overflow-auto">
+        <div class="flex items-center justify-between mb-4 pb-2 border-b">
+          <h3 class="text-xl font-bold text-gray-800">ตรวจข้อสอบอัตนัย</h3>
+          <button onclick="hideModal('grading-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div id="grading-content" class="space-y-4"></div>
+        <div class="mt-6">
+          <button onclick="saveGrading(event)" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow transition">บันทึกคะแนน</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Announcement Modal -->
+    <div id="announcement-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+      <div class="bg-white rounded-2xl card-shadow p-6 w-full max-w-lg mx-4 fade-in">
+        <div class="flex items-center justify-between mb-4 pb-2 border-b">
+          <h3 id="announcement-modal-title" class="text-xl font-bold text-gray-800">ประกาศข่าวสาร</h3>
+          <button onclick="hideModal('announcement-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="announcement-form" class="space-y-4">
+          <input type="hidden" id="announcement-edit-id">
+          <div>
+            <label class="block text-gray-700 font-medium mb-1 text-sm">หัวข้อประกาศ</label>
+            <input type="text" id="announcement-title" required class="w-full px-4 py-2 border rounded-xl text-sm">
+          </div>
+          <div>
+            <label class="block text-gray-700 font-medium mb-1 text-sm">ระดับ</label>
+            <select id="announcement-level" class="w-full px-4 py-2 border rounded-xl text-sm">
+              <option value="info">ทั่วไป</option>
+              <option value="warning">สำคัญ</option>
+              <option value="urgent">ด่วนที่สุด</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700 font-medium mb-1 text-sm">เนื้อหา</label>
+            <textarea id="announcement-content" required rows="4" class="w-full px-4 py-2 border rounded-xl text-sm font-sarabun"></textarea>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="announcement-active" checked class="w-5 h-5 text-primary-600 rounded">
+            <label for="announcement-active" class="text-sm font-medium text-gray-700 cursor-pointer">เปิดแสดงผลประกาศ</label>
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button type="button" onclick="hideModal('announcement-modal')" class="flex-1 bg-gray-200 text-gray-700 font-bold py-2 rounded-xl">ยกเลิก</button>
+            <button type="submit" class="flex-1 bg-primary-600 text-white font-bold py-2 rounded-xl">บันทึก</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Proctor Direct Message Modal -->
+    <div id="proctor-message-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+      <div class="bg-white rounded-2xl card-shadow p-6 w-full max-w-md mx-4 fade-in">
+        <h3 class="text-lg font-bold text-gray-800 mb-2">เตือนผู้สอบ</h3>
+        <form id="proctor-message-form" class="space-y-4">
+          <input type="hidden" id="proctor-msg-target-id">
+          <input type="hidden" id="proctor-msg-subject-id">
+          <p id="proctor-msg-target-name" class="font-bold text-primary-600 text-sm bg-blue-50 p-2 rounded-lg"></p>
+          <textarea id="proctor-msg-text" required rows="3" class="w-full px-4 py-2 border rounded-xl text-sm" placeholder="พิมพ์ข้อความเตือน..."></textarea>
+          <div class="flex gap-2">
+            <button type="button" onclick="hideModal('proctor-message-modal')" class="flex-1 bg-gray-200 font-bold py-2 rounded-xl text-sm">ยกเลิก</button>
+            <button type="submit" class="flex-1 bg-primary-600 text-white font-bold py-2 rounded-xl text-sm">ส่งคำเตือน</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Broadcast Modal -->
+    <div id="broadcast-message-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+      <div class="bg-white rounded-2xl card-shadow p-6 w-full max-w-md mx-4 fade-in">
+        <h3 class="text-lg font-bold text-gray-800 mb-2">แจ้งเตือนทุกคนในห้องสอบ</h3>
+        <form id="broadcast-message-form" class="space-y-4">
+          <p id="broadcast-subject-name-label" class="text-sm font-bold text-gray-700 bg-gray-100 p-2 rounded-lg"></p>
+          <textarea id="broadcast-msg-text" required rows="4" class="w-full px-4 py-2 border rounded-xl text-sm" placeholder="พิมพ์ข้อความประกาศ..."></textarea>
+          <div class="flex gap-2">
+            <button type="button" onclick="hideModal('broadcast-message-modal')" class="flex-1 bg-gray-200 font-bold py-2 rounded-xl text-sm">ยกเลิก</button>
+            <button type="submit" class="flex-1 bg-primary-600 text-white font-bold py-2 rounded-xl text-sm">ประกาศทุกคน</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-delete-modal" class="hidden fixed inset-0 z-[90] flex items-center justify-center modal-overlay">
+      <div class="bg-white rounded-2xl card-shadow p-6 w-full max-w-md mx-4 fade-in text-center">
+        <div id="confirm-modal-icon-container" class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i id="confirm-modal-icon" class="fas fa-exclamation-triangle text-3xl text-red-500"></i>
+        </div>
+        <h3 id="confirm-modal-title" class="text-xl font-bold text-gray-800 mb-2">ยืนยันการดำเนินการ</h3>
+        <div id="delete-message" class="text-gray-700 mb-6 bg-gray-50 border rounded-xl p-3.5 text-sm font-medium"></div>
+        <div class="flex gap-3">
+          <button onclick="hideModal('confirm-delete-modal')" class="flex-1 bg-gray-200 font-bold py-2.5 rounded-xl">ยกเลิก</button>
+          <button id="confirm-delete-btn" class="flex-1 bg-red-600 text-white font-bold py-2.5 rounded-xl shadow">ยืนยัน</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center modal-overlay">
+      <div class="bg-white rounded-2xl card-shadow p-6 w-full max-w-sm mx-4 fade-in text-center">
+        <div id="alert-icon" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"></div>
+        <h3 id="alert-title" class="text-xl font-bold text-gray-800 mb-2"></h3>
+        <p id="alert-message" class="text-gray-600 mb-6 text-sm"></p>
+        <button onclick="hideModal('alert-modal')" class="bg-primary-600 text-white font-bold py-2.5 px-8 rounded-xl">ตกลง</button>
+      </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="add-member-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+      <div class="bg-white rounded-2xl card-shadow p-6 w-full max-w-md mx-4 fade-in">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">เพิ่มสมาชิกใหม่</h3>
+        <form id="add-member-form" class="space-y-3">
+          <div><label class="text-xs font-bold text-gray-600">ชื่อผู้ใช้</label><input type="text" id="member-username" required class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+          <div><label class="text-xs font-bold text-gray-600">ชื่อ-สกุล</label><input type="text" id="member-fullname" required class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+          <div><label class="text-xs font-bold text-gray-600">อีเมล</label><input type="email" id="member-email" required class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+          <div><label class="text-xs font-bold text-gray-600">รหัสผ่าน</label><input type="password" id="member-password" required class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">บทบาท</label>
+            <select id="member-role" class="w-full px-3 py-2 border rounded-lg text-sm"><option value="admin">ผู้ดูแลระบบ</option><option value="teacher" selected>ครู</option></select>
+          </div>
+          <div class="flex gap-2 pt-2">
+            <button type="button" onclick="hideModal('add-member-modal')" class="flex-1 bg-gray-200 py-2 rounded-lg text-sm font-bold">ยกเลิก</button>
+            <button type="submit" class="flex-1 bg-primary-600 text-white py-2 rounded-lg text-sm font-bold shadow">บันทึก</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="admin-register-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+      <div class="bg-white rounded-2xl card-shadow p-6 w-full max-w-md mx-4 fade-in">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">สมัครสมาชิกครู</h3>
+        <form id="admin-register-form" class="space-y-3">
+          <div><label class="text-xs font-bold text-gray-600">ชื่อผู้ใช้</label><input type="text" id="reg-username" required class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+          <div><label class="text-xs font-bold text-gray-600">ชื่อ-สกุล</label><input type="text" id="reg-fullname" required class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+          <div><label class="text-xs font-bold text-gray-600">อีเมล</label><input type="email" id="reg-email" required class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+          <div><label class="text-xs font-bold text-gray-600">รหัสผ่าน</label><input type="password" id="reg-password" required class="w-full px-3 py-2 border rounded-lg text-sm"></div>
+          <div class="flex gap-2 pt-2">
+            <button type="button" onclick="hideModal('admin-register-modal')" class="flex-1 bg-gray-200 py-2 rounded-lg text-sm font-bold">ยกเลิก</button>
+            <button type="submit" class="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-bold shadow">สมัครสมาชิก</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  
+  <script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbw8fEg4_408nVxzXlXY6zlJJLb5GJzZhnMfKrELp_-rY2HV36x3DvOuakuS5PUTu63o/exec'; 
+
+    let appData = [];
+    let currentUser = null;
+    let teacherAuthToken = localStorage.getItem('donmueang_teacher_token') || '';
+    let parsedMCQuestions = [];
+    let parsedEssayQuestions = [];
+    let currentGradingResult = null;
+    let proctoringInterval = null;
+
+    function isUserAdmin() {
+      if (!currentUser || !currentUser.role) return false;
+      const role = String(currentUser.role).trim().toLowerCase();
+      return role === 'admin' || role === 'ผู้ดูแลระบบ' || role === 'ผู้ดูแลหลัก';
+    }
+
+    function generateId() {
+      return Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+    }
+
+    function startLoading() { document.getElementById('loading').classList.remove('hidden'); }
+    function stopLoading() { document.getElementById('loading').classList.add('hidden'); }
+    function showModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
+    function hideModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
+
+    function showAlert(type, title, message) {
+      const iconEl = document.getElementById('alert-icon');
+      const titleEl = document.getElementById('alert-title');
+      const messageEl = document.getElementById('alert-message');
+      
+      if (type === 'success') {
+        iconEl.className = 'w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4';
+        iconEl.innerHTML = '<i class="fas fa-check text-3xl text-green-500"></i>';
+      } else if (type === 'error') {
+        iconEl.className = 'w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4';
+        iconEl.innerHTML = '<i class="fas fa-times text-3xl text-red-500"></i>';
+      } else {
+        iconEl.className = 'w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4';
+        iconEl.innerHTML = '<i class="fas fa-info text-3xl text-blue-500"></i>';
+      }
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      showModal('alert-modal');
+    }
+
+    function showActionConfirm({ title = 'ยืนยันการดำเนินการ', message, icon = 'fa-exclamation-triangle', iconColor = 'text-red-500', iconBg = 'bg-red-100', confirmText = 'ยืนยัน', confirmClass = 'bg-red-600 hover:bg-red-700 text-white', onConfirm }) {
+      const modalTitle = document.getElementById('confirm-modal-title');
+      const modalMsg = document.getElementById('delete-message');
+      const iconContainer = document.getElementById('confirm-modal-icon-container');
+      const iconEl = document.getElementById('confirm-modal-icon');
+      const confirmBtn = document.getElementById('confirm-delete-btn');
+
+      if (modalTitle) modalTitle.textContent = title;
+      if (modalMsg) modalMsg.innerHTML = message;
+      if (iconContainer) iconContainer.className = `w-16 h-16 ${iconBg} rounded-full flex items-center justify-center mx-auto mb-4`;
+      if (iconEl) iconEl.className = `fas ${icon} text-3xl ${iconColor}`;
+
+      if (confirmBtn) {
+        confirmBtn.className = `flex-1 font-bold py-2.5 px-4 rounded-xl transition shadow ${confirmClass}`;
+        confirmBtn.textContent = confirmText;
+        confirmBtn.onclick = async () => {
+          hideModal('confirm-delete-modal');
+          if (onConfirm) await onConfirm();
+        };
+      }
+      showModal('confirm-delete-modal');
+    }
+
+    window.dataSdk = {
+      _callAPI: async function(action, payload = null) {
+        try {
+          const bodyPayload = { action, payload, token: teacherAuthToken || '' };
+          const response = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(bodyPayload)
+          });
+          const result = await response.json();
+          if (result.status === 'success') {
+            return result.data;
+          } else {
+            if (result.message && (result.message.includes('401') || result.message.includes('Unauthorized') || result.message.includes('Session Token'))) {
+              teacherAuthToken = '';
+              localStorage.removeItem('donmueang_teacher_token');
+              currentUser = null;
+              showAlert('warning', 'เซสชันหมดอายุ', 'เซสชันของคุณหมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่');
+              document.getElementById('view-portal').classList.add('hidden');
+              document.getElementById('view-login').classList.remove('hidden');
+            }
+            throw new Error(result.message);
+          }
+        } catch (error) {
+          console.error("API Error:", error);
+          throw error;
+        }
+      },
+      create: async function(item) {
+        try {
+          const savedItem = await this._callAPI('createData', item);
+          appData.push(savedItem);
+          updateUI();
+          return { isOk: true, data: savedItem };
+        } catch (err) { return { isOk: false, error: err }; }
+      },
+      update: async function(item) {
+        try {
+          const updatedItem = await this._callAPI('updateData', item);
+          const index = appData.findIndex(d => d.id === updatedItem.id || d.__backendId === updatedItem.__backendId);
+          if (index !== -1) appData[index] = updatedItem;
+          updateUI();
+          return { isOk: true, data: updatedItem };
+        } catch (err) { return { isOk: false, error: err }; }
+      },
+      delete: async function(item) {
+        try {
+          const success = await this._callAPI('deleteData', item);
+          if (success) {
+            appData = appData.filter(d => d.id !== item.id && d.__backendId !== item.__backendId);
+            updateUI();
+            return { isOk: true };
+          }
+          return { isOk: false };
+        } catch (err) { return { isOk: false, error: err }; }
+      }
+    };
+
+    function getMembers() { return appData.filter(d => d.type === 'member'); }
+    function getExams() {
+      if (isUserAdmin()) return appData.filter(d => d.type === 'exam');
+      return appData.filter(d => d.type === 'exam' && d.member_id === currentUser?.__backendId);
+    }
+    function getStudents() {
+      if (!currentUser) return [];
+      if (isUserAdmin()) return appData.filter(d => d.type === 'student');
+      const examIds = getExams().map(e => e.id);
+      return appData.filter(d => d.type === 'student' && examIds.includes(d.subject_id));
+    }
+    function getResults() {
+      if (!currentUser) return [];
+      if (isUserAdmin()) return appData.filter(d => d.type === 'result');
+      const examIds = getExams().map(e => e.id);
+      return appData.filter(d => d.type === 'result' && examIds.includes(d.subject_id));
+    }
+    function getAnnouncements() { return appData.filter(d => d.type === 'announcement'); }
+
+    function updateUI() {
+      if (!currentUser) return;
+      document.getElementById('stat-members').textContent = getMembers().length;
+      document.getElementById('stat-exams').textContent = getExams().length;
+      document.getElementById('stat-students').textContent = getStudents().length;
+      document.getElementById('stat-results').textContent = getResults().length;
+      
+      updateCharts();
+      updateActivityLogs();
+      updateAnnouncementsTable();
+      updateProctorSubjectSelect();
+      updateMembersTable();
+      updateExamsTable();
+      updateStudentsTable();
+      updateResultsTable();
+      updateGradingTable();
+      updateTimeSettings();
+    }
+
+    function updateCharts() {
+      const dailyCtx = document.getElementById('chart-daily');
+      if (dailyCtx && window.Chart) {
+        const existing = Chart.getChart(dailyCtx);
+        if (existing) existing.destroy();
+        new Chart(dailyCtx, {
+          type: 'line',
+          data: {
+            labels: ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'],
+            datasets: [{ label: 'จำนวนผู้สอบ', data: [2, 5, 8, 12, 19, 14, 7], borderColor: '#3b82f6', tension: 0.3, fill: true, backgroundColor: 'rgba(59,130,246,0.1)' }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+      }
+
+      const passCtx = document.getElementById('chart-pass-fail');
+      if (passCtx && window.Chart) {
+        const existing2 = Chart.getChart(passCtx);
+        if (existing2) existing2.destroy();
+        new Chart(passCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['ผ่านเกณฑ์', 'ไม่ผ่านเกณฑ์'],
+            datasets: [{ data: [15, 3], backgroundColor: ['#10b981', '#ef4444'] }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '65%' }
+        });
+      }
+    }
+
+    function updateActivityLogs() {
+      const container = document.getElementById('recent-activity');
+      if (!container) return;
+      const logs = appData.filter(d => d.type === 'log').slice(0, 15);
+      if (logs.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-4">ยังไม่มีกิจกรรม</p>';
+        return;
+      }
+      container.innerHTML = logs.map(l => `
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl text-sm border">
+          <span class="font-bold text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">${l.username || 'ระบบ'}</span>
+          <span class="text-gray-700 flex-1 truncate">${l.action || l.note}</span>
+          <span class="text-xs text-gray-400">${new Date(l.timestamp || Date.now()).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+      `).join('');
+    }
+
+    function updateAnnouncementsTable() {
+      const tbody = document.getElementById('announcements-table');
+      if (!tbody) return;
+      const list = getAnnouncements();
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">ไม่พบประกาศ</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map((a, i) => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 text-sm">${i + 1}</td>
+          <td class="px-4 py-3 text-sm font-medium">${a.title}</td>
+          <td class="px-4 py-3 text-sm"><span class="badge ${a.level === 'urgent' ? 'badge-danger' : (a.level === 'warning' ? 'badge-warning' : 'badge-info')}">${a.level}</span></td>
+          <td class="px-4 py-3 text-sm text-gray-500">${new Date(a.created_at).toLocaleDateString('th-TH')}</td>
+          <td class="px-4 py-3"><span class="badge ${a.is_active ? 'badge-success' : 'badge-danger'}">${a.is_active ? 'แสดง' : 'ซ่อน'}</span></td>
+          <td class="px-4 py-3 text-center">
+            <button onclick="editAnnouncement('${a.__backendId}')" class="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 bg-blue-50 rounded mr-1">แก้ไข</button>
+            <button onclick="deleteAnnouncement('${a.__backendId}')" class="text-red-600 hover:text-red-800 text-xs px-2 py-1 bg-red-50 rounded">ลบ</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openAddAnnouncementModal() {
+      if (!isUserAdmin()) { showAlert('warning', 'ไม่มีสิทธิ์', 'เฉพาะผู้ดูแลระบบเท่านั้น'); return; }
+      document.getElementById('announcement-edit-id').value = '';
+      document.getElementById('announcement-title').value = '';
+      document.getElementById('announcement-content').value = '';
+      showModal('announcement-modal');
+    }
+
+    function editAnnouncement(id) {
+      if (!isUserAdmin()) { showAlert('warning', 'ไม่มีสิทธิ์', 'เฉพาะผู้ดูแลระบบเท่านั้น'); return; }
+      const item = appData.find(d => d.__backendId === id);
+      if (!item) return;
+      document.getElementById('announcement-edit-id').value = id;
+      document.getElementById('announcement-title').value = item.title;
+      document.getElementById('announcement-content').value = item.content;
+      document.getElementById('announcement-level').value = item.level || 'info';
+      document.getElementById('announcement-active').checked = item.is_active;
+      showModal('announcement-modal');
+    }
+
+    function deleteAnnouncement(id) {
+      if (!isUserAdmin()) { showAlert('warning', 'ไม่มีสิทธิ์', 'เฉพาะผู้ดูแลระบบเท่านั้น'); return; }
+      const item = appData.find(d => d.__backendId === id);
+      if (!item) return;
+      showActionConfirm({
+        title: 'ยืนยันการลบประกาศ',
+        message: `คุณต้องการลบประกาศ "${item.title}" ใช่หรือไม่?`,
+        onConfirm: async () => { await window.dataSdk.delete(item); }
+      });
+    }
+
+    document.getElementById('announcement-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const editId = document.getElementById('announcement-edit-id').value;
+      const title = document.getElementById('announcement-title').value.trim();
+      const level = document.getElementById('announcement-level').value;
+      const content = document.getElementById('announcement-content').value.trim();
+      const isActive = document.getElementById('announcement-active').checked;
+
+      if (editId) {
+        const item = appData.find(d => d.__backendId === editId);
+        if (item) {
+          await window.dataSdk.update({ ...item, title, level, content, is_active: isActive });
+          hideModal('announcement-modal');
+        }
+      } else {
+        await window.dataSdk.create({
+          id: generateId(),
+          type: 'announcement',
+          title, level, content, is_active: isActive,
+          created_by: currentUser.fullname,
+          created_at: new Date().toISOString()
+        });
+        hideModal('announcement-modal');
+      }
+    });
+
+    function updateProctorSubjectSelect() {
+      const select = document.getElementById('proctor-subject-select');
+      if (!select) return;
+      const exams = getExams();
+      const current = select.value;
+      select.innerHTML = '<option value="">-- เลือกรายวิชาเพื่อคุมสอบ --</option>';
+      exams.forEach(e => { select.innerHTML += `<option value="${e.id}">${e.subject_name}</option>`; });
+      select.value = current;
+    }
+
+    function changeProctorSubject() { renderProctoringLive(); }
+
+    function renderProctoringLive() {
+      const subjectId = document.getElementById('proctor-subject-select').value;
+      const tbody = document.getElementById('proctor-students-table');
+      const subjectLabel = document.getElementById('proctor-current-subject-label');
+      if (!subjectId) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-12 text-center text-gray-400">กรุณาเลือกรายวิชาเพื่อเริ่มคุมสอบ</td></tr>';
+        subjectLabel.textContent = 'ยังไม่ได้เลือกรายวิชา';
+        return;
+      }
+
+      const exam = appData.find(e => e.id === subjectId && e.type === 'exam');
+      subjectLabel.textContent = exam ? `วิชา: ${exam.subject_name}` : 'คุมสอบ';
+
+      const students = appData.filter(d => d.type === 'student' && String(d.subject_id) === String(subjectId));
+      const results = appData.filter(d => d.type === 'result' && String(d.subject_id) === String(subjectId));
+
+      let active = 0, warned = 0, submitted = 0, disq = 0;
+
+      if (students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">ยังไม่มีผู้สอบในวิชานี้</td></tr>';
+      } else {
+        tbody.innerHTML = students.map((s, idx) => {
+          const res = results.find(r => String(r.student_id) === String(s.student_id));
+          const isDisq = s.is_disqualified || (res && res.cheating_detected);
+          const isSub = !!res;
+          const warnings = s.warnings || 0;
+
+          if (isDisq) disq++;
+          else if (isSub) submitted++;
+          else { active++; if (warnings > 0) warned++; }
+
+          return `
+            <tr class="hover:bg-blue-50/50">
+              <td class="px-4 py-3 text-sm">${idx + 1}</td>
+              <td class="px-4 py-3 text-sm font-bold text-gray-800">${s.fullname} <span class="block text-xs font-normal text-gray-500">${s.student_id}</span></td>
+              <td class="px-4 py-3 text-sm">${s.class_name}/${s.room} #${s.number}</td>
+              <td class="px-4 py-3 text-xs text-gray-500">${s.started_at ? new Date(s.started_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+              <td class="px-4 py-3 text-xs font-bold text-red-600">${warnings}/3 ครั้ง</td>
+              <td class="px-4 py-3"><span class="badge ${isDisq ? 'badge-danger' : (isSub ? 'badge-success' : 'badge-info')}">${isDisq ? 'ตัดสิทธิ์' : (isSub ? 'ส่งแล้ว' : 'กำลังสอบ')}</span></td>
+              <td class="px-4 py-3 text-center">
+                <button onclick="openDirectProctorMessageModal('${s.student_id}', '${s.fullname}', '${subjectId}')" ${isSub || isDisq ? 'disabled' : ''} class="bg-primary-600 disabled:opacity-40 text-white text-xs px-2.5 py-1 rounded shadow-sm mr-1">เตือน</button>
+                <button onclick="proctorDisqualifyStudent('${s.student_id}', '${s.fullname}', '${subjectId}')" ${isSub || isDisq ? 'disabled' : ''} class="bg-red-600 disabled:opacity-40 text-white text-xs px-2.5 py-1 rounded shadow-sm">ตัดสิทธิ์</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('proctor-stat-active').textContent = active;
+      document.getElementById('proctor-stat-warned').textContent = warned;
+      document.getElementById('proctor-stat-submitted').textContent = submitted;
+      document.getElementById('proctor-stat-disqualified').textContent = disq;
+    }
+
+    function openDirectProctorMessageModal(sid, name, subId) {
+      document.getElementById('proctor-msg-target-id').value = sid;
+      document.getElementById('proctor-msg-subject-id').value = subId;
+      document.getElementById('proctor-msg-target-name').textContent = `${name} (${sid})`;
+      document.getElementById('proctor-msg-text').value = '';
+      showModal('proctor-message-modal');
+    }
+
+    document.getElementById('proctor-message-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const targetId = document.getElementById('proctor-msg-target-id').value;
+      const subjectId = document.getElementById('proctor-msg-subject-id').value;
+      const text = document.getElementById('proctor-msg-text').value.trim();
+
+      await window.dataSdk.create({
+        id: generateId(),
+        type: 'proctor_msg',
+        target_student_id: targetId,
+        subject_id: subjectId,
+        message: text,
+        sender_name: currentUser.fullname,
+        created_at: new Date().toISOString()
+      });
+      hideModal('proctor-message-modal');
+      showAlert('success', 'ส่งแล้ว', 'ส่งข้อความเตือนไปยังนักเรียนเรียบร้อยแล้ว');
+    });
+
+    function broadcastAlertToAllModal() {
+      const subjectId = document.getElementById('proctor-subject-select').value;
+      if (!subjectId) { showAlert('warning', 'เลือกวิชา', 'กรุณาเลือกรายวิชาเพื่อคุมสอบก่อน'); return; }
+      const exam = appData.find(e => e.id === subjectId && e.type === 'exam');
+      document.getElementById('broadcast-subject-name-label').textContent = exam ? exam.subject_name : '-';
+      document.getElementById('broadcast-msg-text').value = '';
+      showModal('broadcast-message-modal');
+    }
+
+    document.getElementById('broadcast-message-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const subjectId = document.getElementById('proctor-subject-select').value;
+      const text = document.getElementById('broadcast-msg-text').value.trim();
+
+      await window.dataSdk.create({
+        id: generateId(),
+        type: 'proctor_msg',
+        target_student_id: 'ALL',
+        subject_id: subjectId,
+        message: text,
+        sender_name: currentUser.fullname,
+        created_at: new Date().toISOString()
+      });
+      hideModal('broadcast-message-modal');
+      showAlert('success', 'ประกาศแล้ว', 'ส่งข้อความประกาศเตือนทุกคนเรียบร้อยแล้ว');
+    });
+
+    function proctorDisqualifyStudent(sid, name, subId) {
+      showActionConfirm({
+        title: 'ยืนยันการตัดสิทธิ์ทันที',
+        message: `คุณต้องการตัดสิทธิ์การสอบของ "${name}" (${sid}) ใช่หรือไม่?`,
+        confirmText: 'ตัดสิทธิ์ทันที',
+        onConfirm: async () => {
+          const student = appData.find(d => d.type === 'student' && String(d.student_id) === String(sid) && String(d.subject_id) === String(subId));
+          if (student) await window.dataSdk.update({ ...student, is_disqualified: true, warnings: 4 });
+
+          await window.dataSdk.create({
+            id: generateId(),
+            type: 'proctor_msg',
+            target_student_id: sid,
+            subject_id: subId,
+            action: 'DISQUALIFY',
+            message: 'ผู้คุมสอบได้สั่งตัดสิทธิ์การสอบของคุณทันทีเนื่องจากละเมิดกฎระเบียบการสอบ',
+            sender_name: currentUser.fullname,
+            created_at: new Date().toISOString()
+          });
+          renderProctoringLive();
+          showAlert('success', 'ตัดสิทธิ์แล้ว', `ตัดสิทธิ์การสอบของ ${name} เรียบร้อยแล้ว`);
+        }
+      });
+    }
+
+    function updateMembersTable() {
+      const tbody = document.getElementById('members-table');
+      if (!tbody) return;
+      const members = getMembers();
+      tbody.innerHTML = members.map((m, i) => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 text-sm">${i + 1}</td>
+          <td class="px-4 py-3 text-sm font-semibold">${m.username}</td>
+          <td class="px-4 py-3 text-sm">${m.fullname}</td>
+          <td class="px-4 py-3 text-sm">${m.email || '-'}</td>
+          <td class="px-4 py-3"><span class="badge ${m.status === 'active' ? 'badge-success' : 'badge-warning'}">${m.status}</span></td>
+          <td class="px-4 py-3"><span class="badge badge-info">${m.role}</span></td>
+          <td class="px-4 py-3 text-center">
+            <button onclick="deleteMember('${m.__backendId}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 bg-red-50 rounded">ลบ</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function deleteMember(id) {
+      if (!isUserAdmin()) { showAlert('warning', 'ไม่มีสิทธิ์', 'เฉพาะผู้ดูแลระบบหลักเท่านั้น'); return; }
+      const item = appData.find(d => d.__backendId === id);
+      if (!item) return;
+      showActionConfirm({
+        title: 'ยืนยันการลบสมาชิก',
+        message: `คุณต้องการลบสมาชิก "${item.fullname}" ใช่หรือไม่?`,
+        onConfirm: async () => { await window.dataSdk.delete(item); }
+      });
+    }
+
+    function updateExamsTable() {
+      const tbody = document.getElementById('exams-table');
+      if (!tbody) return;
+      const exams = getExams();
+      tbody.innerHTML = exams.map((e, i) => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 text-sm">${i + 1}</td>
+          <td class="px-4 py-3 text-sm font-bold">${e.subject_name}</td>
+          <td class="px-4 py-3 text-sm">${e.time_limit} นาที</td>
+          <td class="px-4 py-3 text-sm">${e.total_score} (${e.passing_score})</td>
+          <td class="px-4 py-3 text-sm">${e.time_limit} นาที</td>
+          <td class="px-4 py-3"><span class="badge ${e.is_visible ? 'badge-success' : 'badge-danger'}">${e.is_visible ? 'เปิด' : 'ปิด'}</span></td>
+          <td class="px-4 py-3 text-center">
+            <button onclick="deleteExam('${e.__backendId}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 bg-red-50 rounded">ลบ</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function deleteExam(id) {
+      const item = appData.find(d => d.__backendId === id);
+      if (!item) return;
+      showActionConfirm({
+        title: 'ยืนยันการลบข้อสอบ',
+        message: `คุณต้องการลบข้อสอบวิชา "${item.subject_name}" ใช่หรือไม่?`,
+        onConfirm: async () => { await window.dataSdk.delete(item); }
+      });
+    }
+
+    function updateStudentsTable() {
+      const filterSelect = document.getElementById('students-filter-subject');
+      const students = getStudents();
+      const subjects = [...new Set(students.map(s => s.subject_name))].sort();
+      const cur = filterSelect.value;
+      filterSelect.innerHTML = '<option value="">ทั้งหมด</option>';
+      subjects.forEach(s => { filterSelect.innerHTML += `<option value="${s}">${s}</option>`; });
+      filterSelect.value = cur;
+      filterStudentsTable();
+    }
+
+    function filterStudentsTable() {
+      const tbody = document.getElementById('students-table');
+      const val = document.getElementById('students-filter-subject').value;
+      const list = val ? getStudents().filter(s => s.subject_name === val) : getStudents();
+      tbody.innerHTML = list.map((s, i) => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 text-sm">${i + 1}</td>
+          <td class="px-4 py-3 text-sm font-bold">${s.student_id}</td>
+          <td class="px-4 py-3 text-sm">${s.fullname}</td>
+          <td class="px-4 py-3 text-sm">${s.class_name}/${s.room}</td>
+          <td class="px-4 py-3 text-sm">#${s.number}</td>
+          <td class="px-4 py-3 text-sm">${s.subject_name}</td>
+          <td class="px-4 py-3"><span class="badge ${s.is_disqualified ? 'badge-danger' : 'badge-info'}">${s.is_disqualified ? 'ตัดสิทธิ์' : 'เข้าสอบแล้ว'}</span></td>
+          <td class="px-4 py-3 text-center"><button onclick="deleteStudent('${s.__backendId}')" class="text-red-500 text-xs px-2 py-1 bg-red-50 rounded">ลบ</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function deleteStudent(id) {
+      const item = appData.find(d => d.__backendId === id);
+      if (!item) return;
+      showActionConfirm({
+        title: 'ยืนยันการลบผู้สอบ',
+        message: `คุณต้องการลบข้อมูลผู้สอบ "${item.fullname}" ใช่หรือไม่?`,
+        onConfirm: async () => { await window.dataSdk.delete(item); }
+      });
+    }
+
+    function updateResultsTable() {
+      const filterSelect = document.getElementById('results-filter-subject');
+      const results = getResults();
+      const subjects = [...new Set(results.map(r => r.subject_name))].sort();
+      const cur = filterSelect.value;
+      filterSelect.innerHTML = '<option value="">ทั้งหมด</option>';
+      subjects.forEach(s => { filterSelect.innerHTML += `<option value="${s}">${s}</option>`; });
+      filterSelect.value = cur;
+      filterResultsTable();
+    }
+
+    function filterResultsTable() {
+      const tbody = document.getElementById('results-table');
+      const val = document.getElementById('results-filter-subject').value;
+      const list = val ? getResults().filter(r => r.subject_name === val) : getResults();
+      tbody.innerHTML = list.map((r, i) => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 text-sm">${i + 1}</td>
+          <td class="px-4 py-3 text-sm font-bold">${r.student_id} - ${r.fullname}</td>
+          <td class="px-4 py-3 text-sm">${r.subject_name}</td>
+          <td class="px-4 py-3 text-sm font-semibold text-blue-600">${r.mc_score || 0}</td>
+          <td class="px-4 py-3 text-sm font-semibold text-orange-600">${r.essay_score !== undefined ? r.essay_score : (r.graded ? 0 : 'รอตรวจ')}</td>
+          <td class="px-4 py-3 text-sm font-bold text-primary-600">${r.score}/${r.total_score}</td>
+          <td class="px-4 py-3 text-xs text-gray-500">${new Date(r.submitted_at).toLocaleString('th-TH')}</td>
+          <td class="px-4 py-3"><span class="badge ${r.graded ? 'badge-success' : 'badge-warning'}">${r.graded ? 'ตรวจแล้ว' : 'รอตรวจ'}</span></td>
+          <td class="px-4 py-3 text-center">
+            <button onclick="viewResultDetails('${r.__backendId}')" class="bg-blue-600 text-white text-xs px-2.5 py-1 rounded shadow-sm mr-1">ดูคำตอบ</button>
+            <button onclick="deleteResult('${r.__backendId}')" class="text-red-500 text-xs px-2 py-1 bg-red-50 rounded">ลบ</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function viewResultDetails(id) {
+      const res = appData.find(d => d.__backendId === id);
+      if (!res) return;
+      const content = document.getElementById('view-result-content');
+      content.innerHTML = `
+        <div class="bg-gray-50 p-4 rounded-xl border text-sm grid grid-cols-2 gap-2">
+          <p><strong>ผู้สอบ:</strong> ${res.fullname} (${res.student_id})</p>
+          <p><strong>วิชา:</strong> ${res.subject_name}</p>
+          <p><strong>คะแนนรวม:</strong> <span class="font-bold text-primary-600">${res.score} / ${res.total_score}</span></p>
+          <p><strong>สถานะ:</strong> ${res.graded ? 'ตรวจแล้ว' : 'รอตรวจ'}</p>
+        </div>
+      `;
+      showModal('view-result-modal');
+    }
+
+    function deleteResult(id) {
+      const item = appData.find(d => d.__backendId === id);
+      if (!item) return;
+      showActionConfirm({
+        title: 'ยืนยันการลบผลสอบ',
+        message: `คุณต้องการลบผลสอบของ "${item.fullname}" ใช่หรือไม่?`,
+        onConfirm: async () => { await window.dataSdk.delete(item); }
+      });
+    }
+
+    function updateGradingTable() {
+      const tbody = document.getElementById('grading-table');
+      if (!tbody) return;
+      const list = getResults().filter(r => !r.graded && !r.cheating_detected);
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">ไม่พบข้อสอบที่ต้องตรวจ</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map((r, i) => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 text-sm">${i + 1}</td>
+          <td class="px-4 py-3 text-sm font-bold">${r.student_id} - ${r.fullname}</td>
+          <td class="px-4 py-3 text-sm">${r.subject_name}</td>
+          <td class="px-4 py-3"><span class="badge badge-warning">รอตรวจ</span></td>
+          <td class="px-4 py-3 text-center"><button onclick="openGrading('${r.__backendId}')" class="bg-primary-600 text-white text-xs px-3 py-1 rounded">ตรวจ</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function openGrading(id) {
+      const res = appData.find(d => d.__backendId === id);
+      if (!res) return;
+      currentGradingResult = res;
+      const content = document.getElementById('grading-content');
+      content.innerHTML = `
+        <p class="font-bold text-gray-800">${res.fullname} (${res.student_id}) - ${res.subject_name}</p>
+        <div class="p-3 bg-gray-50 rounded border">
+          <label class="block text-xs font-bold text-gray-500 mb-1">คะแนนอัตนัยรวม</label>
+          <input type="number" id="grading-essay-score" value="0" min="0" step="0.5" class="px-4 py-2 border rounded-lg text-lg font-bold text-primary-600">
+        </div>
+      `;
+      showModal('grading-modal');
+    }
+
+    async function saveGrading(event) {
+      if (!currentGradingResult) return;
+      const score = parseFloat(document.getElementById('grading-essay-score').value) || 0;
+      const total = (currentGradingResult.mc_score || 0) + score;
+
+      await window.dataSdk.update({
+        ...currentGradingResult,
+        essay_score: score,
+        score: total,
+        graded: true
+      });
+      hideModal('grading-modal');
+      showAlert('success', 'ตรวจสำเร็จ', 'บันทึกคะแนนอัตนัยเรียบร้อยแล้ว');
+      currentGradingResult = null;
+    }
+
+    function updateTimeSettings() {
+      const container = document.getElementById('time-settings-list');
+      if (!container) return;
+      const exams = getExams();
+      container.innerHTML = exams.map(e => `
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border">
+          <div><p class="font-bold">${e.subject_name}</p><p class="text-xs text-gray-500">เวลาเดิม: ${e.time_limit} นาที</p></div>
+          <div class="flex items-center gap-2">
+            <input type="number" id="time-input-${e.__backendId}" value="${e.time_limit}" class="w-20 px-3 py-1.5 border rounded-lg text-center font-bold">
+            <button onclick="saveExamTime('${e.__backendId}')" class="bg-primary-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">บันทึก</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function saveExamTime(id) {
+      const exam = appData.find(d => d.__backendId === id);
+      const val = parseInt(document.getElementById(`time-input-${id}`).value);
+      if (!exam || !val) return;
+      await window.dataSdk.update({ ...exam, time_limit: val });
+      showAlert('success', 'บันทึกแล้ว', `ปรับเวลาสอบวิชา "${exam.subject_name}" เรียบร้อยแล้ว`);
+    }
+
+    function showAdminPage(page) {
+      document.querySelectorAll('.admin-content').forEach(c => c.classList.add('hidden'));
+      const target = document.getElementById(`admin-${page}`);
+      if (target) target.classList.remove('hidden');
+      document.querySelectorAll('.sidebar-item').forEach(i => {
+        i.classList.toggle('active', i.dataset.page === page);
+      });
+    }
+
+    function toggleSidebar() {
+      const sb = document.getElementById('admin-sidebar');
+      sb.style.marginLeft = sb.style.marginLeft === '-256px' ? '0' : '-256px';
+    }
+
+    async function refreshData() {
+      startLoading();
+      try {
+        const data = await window.dataSdk._callAPI('getData');
+        appData = data || [];
+        updateUI();
+        showAlert('success', 'อัปเดตแล้ว', 'ดึงข้อมูลล่าสุดเรียบร้อยแล้ว');
+      } finally { stopLoading(); }
+    }
+
+    async function handleLogin(username, password) {
+      startLoading();
+      try {
+        const res = await window.dataSdk._callAPI('login', { username, password });
+        if (res && res.token) {
+          teacherAuthToken = res.token;
+          localStorage.setItem('donmueang_teacher_token', teacherAuthToken);
+          currentUser = res.member;
+          document.getElementById('admin-name').textContent = currentUser.fullname;
+          document.getElementById('admin-role').textContent = isUserAdmin() ? 'ผู้ดูแลระบบ' : 'ครู';
+          
+          document.getElementById('view-login').classList.add('hidden');
+          document.getElementById('view-portal').classList.remove('hidden');
+          updateUI();
+        }
+      } catch (err) {
+        showAlert('error', 'เข้าสู่ระบบไม่สำเร็จ', err.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+      } finally { stopLoading(); }
+    }
+
+    function adminLogout() {
+      showActionConfirm({
+        title: 'ยืนยันการออกจากระบบ',
+        message: 'คุณต้องการออกจากระบบผู้ดูแล/ครูใช่หรือไม่? (เซสชันจะหมดอายุทันที)',
+        confirmText: 'ออกจากระบบ',
+        onConfirm: async () => {
+          try {
+            await fetch(GAS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'logout', token: teacherAuthToken })
+            });
+          } catch(e){}
+          teacherAuthToken = '';
+          localStorage.removeItem('donmueang_teacher_token');
+          currentUser = null;
+          document.getElementById('view-portal').classList.add('hidden');
+          document.getElementById('view-login').classList.remove('hidden');
+        }
+      });
+    }
+
+    document.getElementById('admin-login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleLogin(document.getElementById('admin-username').value.trim(), document.getElementById('admin-password').value.trim());
+    });
+
+    document.getElementById('admin-register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const isFirst = getMembers().length === 0;
+      await window.dataSdk.create({
+        id: generateId(),
+        type: 'member',
+        username: document.getElementById('reg-username').value.trim(),
+        fullname: document.getElementById('reg-fullname').value.trim(),
+        email: document.getElementById('reg-email').value.trim(),
+        password: document.getElementById('reg-password').value.trim(),
+        role: isFirst ? 'admin' : 'teacher',
+        status: isFirst ? 'active' : 'pending',
+        created_at: new Date().toISOString()
+      });
+      hideModal('admin-register-modal');
+      showAlert('success', 'สำเร็จ', 'สมัครสมาชิกเรียบร้อยแล้ว กรุณารอการอนุมัติ');
+    });
+
+    async function exportData(type, format) {
+      let data = [], headers = [], filename = '';
+      if (type === 'members') {
+        data = getMembers().map((m, i) => [i + 1, m.username, m.fullname, m.email, m.status, m.role]);
+        headers = ['#', 'ชื่อผู้ใช้', 'ชื่อ-สกุล', 'อีเมล', 'สถานะ', 'บทบาท'];
+        filename = 'สมาชิก';
+      } else if (type === 'exams') {
+        data = getExams().map((e, i) => [i + 1, e.subject_name, e.time_limit, e.total_score, e.passing_score]);
+        headers = ['#', 'รายวิชา', 'เวลา(นาที)', 'คะแนนเต็ม', 'เกณฑ์ผ่าน'];
+        filename = 'ข้อสอบ';
+      } else if (type === 'students') {
+        data = getStudents().map((s, i) => [i + 1, s.student_id, s.fullname, s.class_name, s.room, s.number, s.subject_name]);
+        headers = ['#', 'รหัสนักเรียน', 'ชื่อ-สกุล', 'ชั้น', 'ห้อง', 'เลขที่', 'วิชา'];
+        filename = 'ผู้เข้าสอบ';
+      } else if (type === 'results') {
+        data = getResults().map((r, i) => [i + 1, r.student_id, r.fullname, r.subject_name, r.mc_score || 0, r.essay_score || 0, r.score, r.total_score]);
+        headers = ['#', 'รหัสนักเรียน', 'ชื่อ-สกุล', 'วิชา', 'คะแนนปรนัย', 'คะแนนอัตนัย', 'คะแนนรวม', 'คะแนนเต็ม'];
+        filename = 'ผลสอบ';
+      }
+
+      if (format === 'excel' && typeof XLSX !== 'undefined') {
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Data');
+        XLSX.writeFile(wb, `${filename}_${Date.now()}.xlsx`);
+      } else {
+        let csv = '\uFEFF' + headers.join(',') + '\n';
+        data.forEach(r => { csv += r.map(c => `"${c}"`).join(',') + '\n'; });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${filename}_${Date.now()}.csv`;
+        link.click();
+      }
+    }
+
+    async function initAdmin() {
+      startLoading();
+      try {
+        const data = await window.dataSdk._callAPI('getData');
+        appData = data || [];
+        if (teacherAuthToken) {
+          // Verify existing session
+          document.getElementById('view-login').classList.add('hidden');
+          document.getElementById('view-portal').classList.remove('hidden');
+          updateUI();
+        }
+      } catch(e){}
+      finally { stopLoading(); }
+    }
+
+    window.onload = initAdmin;
+  </script>
+ </body>
+</html>
